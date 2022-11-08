@@ -26,7 +26,7 @@ const addSlideLink = () => {
 
   if (freeViewingElm) {
     freeViewingElm.onclick = () => {
-      window.open(freeViewingLink, "_blank", "popup");
+      window.open(freeViewingLink, "_blank");
     };
   }
 
@@ -36,7 +36,7 @@ const addSlideLink = () => {
     for (let i = 0; i < slideElement.children.length; i++) {
       const linkSlide = slideElement.children[i].getAttribute("href");
       slideElement.children[i].onclick = () => {
-        window.open(linkSlide, "_blank", "popup");
+        window.open(linkSlide, "_blank");
       };
     }
   }

@@ -23,7 +23,7 @@ $(document).ready(function () {
     const info = JSON.parse(result.infoImage);
 
     const infoArr = Object.keys(info).map((item) => {
-      return `<p class="infomation-item">${item} : ${info[item]}</p>`;
+      return `<p class="infomation-item"><span>${item}</span> : ${info[item]}</p>`;
     });
 
     const infomationElm = document.querySelector("#infomation");

@@ -1,3 +1,5 @@
+const TIME_AUTOMATICALLY_DELETE_PHOTO = 3; //minutes
+
 const express = require("express");
 const app = express();
 const http = require("http");
@@ -7,6 +9,7 @@ const io = new Server(server);
 let path = require("path");
 const fs = require("fs");
 const { clearInterval } = require("timers");
+const dayjs = require("dayjs");
 
 const execSync = require("child_process").execSync;
 const spawn = require("child_process").spawn;
@@ -32,6 +35,8 @@ app.get("/modelX", (req, res) => {
   res.sendFile(__dirname + "/modelX/index.html");
 });
 
+const date = dayjs().format("YYYYMMDDhhmmss");
+
 spawn("conda activate envs", { shell: true });
 io.on("connection", (socket) => {
   console.log("connected");
@@ -40,23 +45,33 @@ io.on("connection", (socket) => {
 
     try {
       var base64Data = msg.replace(/^data:image\/png;base64,/, "");
-
-      var fileName = new Date().getTime() + ".jpeg";
-      var basePath = "/home/ngochoangdev/Desktop/Img/"; // image save path and information image
-      var cameraFileName = "input" + fileName;
-      var aiFileName = "output" + fileName;
+      var fileName = date + ".jpeg";
+      var basePath = "./result/"; // image save path
+      var cameraFileName = "cam_" + fileName;
+      var aiFileName = "output_" + fileName;
       var cameraFile = basePath + cameraFileName;
       var aiFile = basePath + aiFileName;
-      var infoFile = basePath + "info.json";
       fs.writeFile(cameraFile, base64Data, "base64", function (err) {});
+
+      fs.readdirSync("./result").forEach((file) => {
+        const minute1 = dayjs(file.split("_")[1].split(".")[0], "format").get(
+          "minute"
+        );
+        const minute2 = dayjs().get("minute");
+
+        if (minute1 - minute2 >= TIME_AUTOMATICALLY_DELETE_PHOTO) {
+          fs.unlinkSync(`./result/${file}`);
+          console.log("remove");
+        }
+      });
 
       setTimeout(function () {
         execSync(
           "cd ./yolov7 && python main.py --input " +
-            basePath +
+            "../result/" +
             cameraFileName +
             " --output " +
-            basePath +
+            "../result/" +
             aiFileName
         );
       }, 300);
@@ -68,11 +83,13 @@ io.on("connection", (socket) => {
             encoding: "base64",
           });
 
-          const infoImage = fs.readFileSync(infoFile, "utf8");
+          const infoImage = fs.readFileSync("./infomation/info.json", "utf8");
 
           io.emit("recivemsg", { contents, infoImage });
         }
       }, 100);
+
+      console.log(arrPathFileImg);
     } catch (e) {}
   });
 });

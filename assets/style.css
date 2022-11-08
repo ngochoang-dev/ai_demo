@@ -157,6 +157,10 @@ body {
   margin: 2px 0;
 }
 
+.infomation-item span {
+  font-weight: bold;
+}
+
 .image-block {
   width: 520px;
   height: 390px;
