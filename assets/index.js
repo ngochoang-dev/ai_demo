@@ -19,7 +19,6 @@ const handleNavbar = () => {
 const addSlideLink = () => {
   const freeViewingElm = $(".btn-free-viewing");
   const slideElement = $(".slide");
-  const listLinkElm = $$(".slide-item");
   const listElm = listSlides.map((elm) => {
     return `<a target="_blank" href=${elm.link} class="slide-item">${elm.name}</a>`;
   });
@@ -42,9 +41,39 @@ const addSlideLink = () => {
   }
 };
 
+const handleSave = () => {
+  const btnSave = $("#action-save");
+  const outputElm = $("#aiimage");
+
+  if (btnSave) {
+    btnSave.onclick = () => {
+      if (!outputElm.getAttribute("src"))
+        return toastr["error"]("Something went wrong!");
+
+      fetch("/save-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            toastr["success"]("Save successfully!");
+          }
+        })
+        .catch((error) => {
+          toastr["error"]("Something went wrong!");
+          console.error("Error:", error);
+        });
+    };
+  }
+};
+
 function start() {
   addSlideLink();
   handleNavbar();
+  handleSave();
 }
 
 start();

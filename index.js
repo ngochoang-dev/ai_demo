@@ -1,5 +1,3 @@
-const TIME_AUTOMATICALLY_DELETE_PHOTO = 3; //minutes
-
 const express = require("express");
 const app = express();
 const http = require("http");
@@ -10,72 +8,109 @@ let path = require("path");
 const fs = require("fs");
 const { clearInterval } = require("timers");
 const dayjs = require("dayjs");
-
 const execSync = require("child_process").execSync;
 const spawn = require("child_process").spawn;
+const { handleRemove, handleMoveFile } = require("./utils");
+
 spawn("conda activate envs", { shell: true });
 app.use("/assets", express.static(path.join(__dirname, "assets")));
+
+// Check folder is exist
+if (!fs.existsSync("./result")) {
+  fs.mkdirSync("./result");
+}
+if (!fs.existsSync("./tmp")) {
+  fs.mkdirSync("./tmp");
+}
+
+// [GET] render html
 
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/index.html");
 });
 app.get("/model1", (req, res) => {
-  res.sendFile(__dirname + "/model1/index.html");
+  res.sendFile(__dirname + "/htmlFile/model1/index.html");
 });
 
 app.get("/model2", (req, res) => {
-  res.sendFile(__dirname + "/model2/index.html");
+  res.sendFile(__dirname + "/htmlFile/model2/index.html");
 });
 
 app.get("/model3", (req, res) => {
-  res.sendFile(__dirname + "/model3/index.html");
+  res.sendFile(__dirname + "/htmlFile/model3/index.html");
 });
 
 app.get("/modelX", (req, res) => {
-  res.sendFile(__dirname + "/modelX/index.html");
+  res.sendFile(__dirname + "/htmlFile/modelX/index.html");
 });
 
-const date = dayjs().format("YYYYMMDDhhmmss");
+app.get("/modelX", (req, res) => {
+  res.sendFile(__dirname + "/htmlFile/modelX/index.html");
+});
+
+// [POST] save image
+
+app.post("/save-image", async (req, res) => {
+  const time = dayjs().format("YYYYMMDDHHmmss");
+  const newPath = `./save_${time}/`;
+  const tmpPath = "./tmp/";
+  const resultPath = "./result/";
+
+  fs.mkdirSync(newPath);
+
+  const tmpFile = fs.readdirSync("./tmp");
+  const resultFile = fs.readdirSync("./result");
+
+  try {
+    await handleMoveFile(tmpFile, tmpPath, newPath);
+    await handleMoveFile(resultFile, resultPath, newPath);
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false });
+  }
+});
+
+const removeImg = async () => {
+  const inputFile = fs.readdirSync("./tmp");
+  const outputFile = fs.readdirSync("./result");
+
+  await handleRemove(inputFile, "./tmp");
+  await handleRemove(outputFile, "./result");
+};
 
 spawn("conda activate envs", { shell: true });
 io.on("connection", (socket) => {
   console.log("connected");
-  socket.on("sendmsg", (msg) => {
-    // save image here
+  socket.on("sendmsg", async (msg) => {
+    const date = dayjs().format("YYYYMMDDHHmmss");
+
+    await removeImg();
 
     try {
-      var base64Data = msg.replace(/^data:image\/png;base64,/, "");
-      var fileName = date + ".jpeg";
-      var basePath = "./result/"; // image save path
-      var cameraFileName = "cam_" + fileName;
-      var aiFileName = "output_" + fileName;
-      var cameraFile = basePath + cameraFileName;
-      var aiFile = basePath + aiFileName;
-      fs.writeFile(cameraFile, base64Data, "base64", function (err) {});
-
-      fs.readdirSync("./result").forEach((file) => {
-        const minute1 = dayjs(file.split("_")[1].split(".")[0], "format").get(
-          "minute"
-        );
-        const minute2 = dayjs().get("minute");
-
-        if (minute1 - minute2 >= TIME_AUTOMATICALLY_DELETE_PHOTO) {
-          fs.unlinkSync(`./result/${file}`);
-          console.log("remove");
-        }
-      });
+      const base64Data = msg.imageData.replace(/^data:image\/png;base64,/, "");
+      const fileName = date + ".jpeg";
+      const baseInputPath = "./tmp/"; // input image save path
+      const baseOutputPath = "./result/"; // out put image save path
+      const cameraFileName = "cam_" + fileName;
+      const aiFileName = "output_" + fileName;
+      const cameraFile = baseInputPath + cameraFileName;
+      const aiFile = baseOutputPath + aiFileName;
+      const modelId = ` ${msg.modelId}`;
+      fs.writeFile(cameraFile, base64Data, "base64", function (err) {}); // save image here
 
       setTimeout(function () {
         execSync(
           "cd ./yolov7 && python main.py --input " +
-            "../result/" +
+            "../tmp/" +
             cameraFileName +
             " --output " +
             "../result/" +
-            aiFileName
+            aiFileName +
+            modelId // add model id
         );
       }, 300);
-      var inte = setInterval(function () {
+      let inte = setInterval(function () {
         if (fs.existsSync(aiFile)) {
           clearInterval(inte);
           inte = null;
@@ -88,8 +123,6 @@ io.on("connection", (socket) => {
           io.emit("recivemsg", { contents, infoImage });
         }
       }, 100);
-
-      console.log(arrPathFileImg);
     } catch (e) {}
   });
 });

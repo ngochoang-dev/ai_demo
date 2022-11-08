@@ -1,15 +1,6 @@
+import { listModelId } from "./config.js";
+
 $(document).ready(function () {
-  // $('#snap').click(function() {
-  //     var canvas = document.getElementById("canvas");
-  //     var video = document.querySelector("video");
-  //     canvas.width = video.videoWidth;
-  //     canvas.height = video.videoHeight;
-  //     canvas.getContext("2d").drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-  //     // send msg here
-
-  //     // canvas.toDataURL()
-  // })
-
   var socket = io();
 
   setTimeout(function () {
@@ -35,6 +26,8 @@ $(document).ready(function () {
     loadCameraFinish();
   });
   function loadCameraFinish() {
+    const model = window.location.pathname.split("/")[1];
+
     setTimeout(function () {
       // socket.emit("sendmsg", c.toDataURL());
       // thay vì gửi ảnh fix thì phải gửi ảnh camera gửi lên
@@ -48,7 +41,10 @@ $(document).ready(function () {
       canvas
         .getContext("2d")
         .drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-      socket.emit("sendmsg", canvas.toDataURL());
+      socket.emit("sendmsg", {
+        imageData: canvas.toDataURL(),
+        modelId: listModelId[model],
+      });
     }, 2000);
   }
 
